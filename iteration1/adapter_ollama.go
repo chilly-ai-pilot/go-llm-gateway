@@ -80,9 +80,8 @@ func (a *OllamaAdapter) ToProviderRequest(unifiedReq *ChatCompletionRequest) ([]
 	}
 
 	// 强制设置 stream=false（本迭代不支持流式）
-	if unifiedReq.Stream != nil && *unifiedReq.Stream {
-		ollamaReq.Stream = false // 忽略流式请求，Iteration 2 再支持
-	}
+	// Stream 现在是 bool 类型,默认为 false
+	ollamaReq.Stream = false
 
 	return json.Marshal(ollamaReq)
 }

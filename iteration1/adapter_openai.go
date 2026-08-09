@@ -46,9 +46,7 @@ func (a *OpenAIAdapter) ToProviderRequest(unifiedReq *ChatCompletionRequest) ([]
 	if unifiedReq.PresencePenalty != nil {
 		reqBody["presence_penalty"] = *unifiedReq.PresencePenalty
 	}
-	if unifiedReq.N != nil {
-		reqBody["n"] = *unifiedReq.N
-	}
+	// N 字段已移除(Iteration 1/2 不支持 n>1)
 	if unifiedReq.User != "" {
 		reqBody["user"] = unifiedReq.User
 	}

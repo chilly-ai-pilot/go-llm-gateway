@@ -5,18 +5,16 @@ package main
 
 // ChatCompletionRequest OpenAI 格式的请求
 type ChatCompletionRequest struct {
-	Model            string                 `json:"model"`
-	Messages         []Message              `json:"messages"`
-	Temperature      *float64               `json:"temperature,omitempty"`
-	MaxTokens        *int                   `json:"max_tokens,omitempty"`
-	TopP             *float64               `json:"top_p,omitempty"`
-	Stream           *bool                  `json:"stream,omitempty"`
-	Stop             []string               `json:"stop,omitempty"`
-	FrequencyPenalty *float64               `json:"frequency_penalty,omitempty"`
-	PresencePenalty  *float64               `json:"presence_penalty,omitempty"`
-	User             string                 `json:"user,omitempty"`
-	N                *int                   `json:"n,omitempty"`
-	Extra            map[string]interface{} `json:"-"` // 扩展字段
+	Model            string   `json:"model"`
+	Messages         []Message `json:"messages"`
+	Temperature      *float64 `json:"temperature,omitempty"`
+	MaxTokens        *int     `json:"max_tokens,omitempty"`
+	TopP             *float64 `json:"top_p,omitempty"`
+	Stream           bool     `json:"stream"`                    // 流式标志,默认 false
+	Stop             []string `json:"stop,omitempty"`
+	FrequencyPenalty *float64 `json:"frequency_penalty,omitempty"`
+	PresencePenalty  *float64 `json:"presence_penalty,omitempty"`
+	User             string   `json:"user,omitempty"`
 }
 
 // Message 消息结构
