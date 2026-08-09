@@ -56,9 +56,11 @@ curl -X POST http://localhost:8080/api/generate \
 
 解决两个问题:一是"不同模型在不同后端,调用方不想记多个URL和多套请求格式";二是这一步是后续所有可靠性机制(重试、熔断)的底座——先有多个可切换的目标,才能谈切换和降级。
 
-**这一步的核心原则:Schema转换是默认路径,passthrough是例外**
+**这一步的核心原则:Schema转换是唯一路径,不留旁路**
 
-`passthrough: true` 不应该是常规选项,而应该是明确标注的例外。一个真正做到"一个入口通所有模型"的Gateway,对外应该固定暴露一种统一格式(建议对齐OpenAI的 `/v1/chat/completions` 格式,因为这是事实上的行业标准,大部分SDK和工具默认支持这个格式),内部按 `model` 字段路由到不同Provider时,做请求体和响应体的双向转换。passthrough只在"某个Provider有专有能力、你明确知道自己在用它的专有能力"这种例外场景下才手动开启。
+一个真正做到"一个入口通所有模型"的Gateway,对外应该固定暴露一种统一格式(建议对齐OpenAI的 `/v1/chat/completions` 格式,因为这是事实上的行业标准,大部分SDK和工具默认支持这个格式),内部按 `model` 字段路由到不同Provider时,做请求体和响应体的双向转换。
+
+这里刻意不设计passthrough(跳过转换、原样透传)这条旁路,即便真实企业网关里这是常见功能。原因是:现在没有任何一个具体场景需要用到某个Provider的专有参数,为一个假设性需求先搭好配置项、解析逻辑、测试用例,是过早通用化——和这份计划里"不上Redis直到真需要、不上重框架直到真需要"是同一类判断。等哪天真的接入一个有专有能力、统一Schema确实覆盖不了的Provider,再回来加这条路径,那时候需求是具体的,设计也会更准。
 
 **技术选型**
 
@@ -68,7 +70,6 @@ curl -X POST http://localhost:8080/api/generate \
 | Schema转换层 | 每个Provider适配器实现统一接口,含非流式的 `ToProviderRequest()` / `FromProviderResponse()`,以及流式的 `TransformStreamChunk()` | 新增一个Provider只需要实现接口方法,不改路由核心逻辑;流式方法在这一步先占位,避免Iteration 2引入流式时要回头改接口签名 |
 | 路由依据 | 统一请求体里的 `model` 字段 | 调用方无感知,改配置就能切模型 |
 | 路由配置 | `config.yaml` 里的 `routes` 列表,含 `model_pattern`(支持通配符)、`target`、`api_key_env`、`adapter`(指定用哪个Schema转换适配器) | 纯文本配置,改路由不换代码 |
-| passthrough模式 | 仅当 `passthrough: true` 显式声明时跳过Schema转换 | 默认关闭,需要调用方明确知道自己在用某个Provider的专有参数 |
 
 **具体做什么**
 
@@ -104,7 +105,6 @@ func (a *OllamaAdapter) TransformStreamChunk(chunk []byte) (*ChatCompletionChunk
 - 用统一的OpenAI格式请求体,分别传 `model: "llama3"` 和 `model: "deepseek-chat"`,Gateway能正确转换成各自Provider的原生格式发出去,拿到响应后转换回统一格式返回
 - 对比同一个问题在两个Provider下,调用方拿到的响应结构完全一致(字段名、层级),只有内容不同
 - 配置一个不存在的model,返回明确错误而不是网关崩溃
-- 显式开启 `passthrough: true` 的Provider,请求体和响应体不做任何修改
 
 **产出物**:统一Schema定义 + 至少2个Provider的适配器 + 路由配置文档
 

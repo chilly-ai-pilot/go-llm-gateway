@@ -1,0 +1,43 @@
+# LLM Gateway - Iteration 1 配置文件
+# 协议统一 + 多 Provider 路由
+
+# Gateway 监听端口
+port: 8080
+
+# 路由配置
+routes:
+  # Ollama 本地模型路由 - llama 系列
+  # 匹配所有 llama 开头的模型名，如 llama3, llama3.2:latest, llama-7b 等
+  - model_pattern: "llama*"
+    target: "http://localhost:11434"
+    adapter: "ollama"
+
+  # Ollama 本地模型路由 - qwen 系列
+  - model_pattern: "qwen*"
+    target: "http://localhost:11434"
+    adapter: "ollama"
+
+  # Ollama 本地模型路由 - deepseek-r1 系列（本地）
+  # 注意：这是 Ollama 里的 deepseek-r1 模型，不是云端的 deepseek-chat
+  - model_pattern: "deepseek-r1*"
+    target: "http://localhost:11434"
+    adapter: "ollama"
+
+  # DeepSeek 云端模型路由
+  # 使用 OpenAI 兼容格式，所以 adapter 是 "openai" 不是 "deepseek"
+  - model_pattern: "deepseek-chat"
+    target: "https://api.deepseek.com"
+    adapter: "openai"
+    api_key_env: "DEEPSEEK_API_KEY"
+
+  - model_pattern: "deepseek-coder"
+    target: "https://api.deepseek.com"
+    adapter: "openai"
+    api_key_env: "DEEPSEEK_API_KEY"
+
+  # OpenAI 云端模型路由
+  # gpt-3.5-turbo, gpt-4, gpt-4-turbo 等
+  - model_pattern: "gpt-*"
+    target: "https://api.openai.com"
+    adapter: "openai"
+    api_key_env: "OPENAI_API_KEY"
