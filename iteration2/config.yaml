@@ -1,0 +1,62 @@
+# LLM Gateway - Iteration 2 配置文件
+# 流式响应 + 超时管理
+
+# Gateway 监听端口
+port: 8080
+
+# 超时配置
+timeouts:
+  dial_timeout: 5   # 连接超时(秒)
+  ttfb_timeout: 30  # 首字节超时(秒)
+  idle_timeout: 60  # chunk 间隔超时(秒)
+
+# 路由配置
+routes:
+  # Ollama 本地模型路由 - llama 系列
+  # 匹配所有 llama 开头的模型名，如 llama3, llama3.2:latest, llama-7b 等
+  - model_pattern: "llama*"
+    target: "http://localhost:11434"
+    adapter: "ollama"
+
+  # Ollama 本地模型路由 - qwen 系列
+  - model_pattern: "qwen*"
+    target: "http://localhost:11434"
+    adapter: "ollama"
+
+  # Ollama 本地模型路由 - deepseek-r1 系列（本地）
+  # 注意：这是 Ollama 里的 deepseek-r1 模型，不是云端的 deepseek-chat
+  - model_pattern: "deepseek-r1*"
+    target: "http://localhost:11434"
+    adapter: "ollama"
+
+  # DeepSeek 云端模型路由
+  # 使用 OpenAI 兼容格式，所以 adapter 是 "openai" 不是 "deepseek"
+  - model_pattern: "deepseek-chat"
+    target: "https://api.deepseek.com"
+    adapter: "openai"
+    api_key_env: "DEEPSEEK_API_KEY"
+
+  - model_pattern: "deepseek-coder"
+    target: "https://api.deepseek.com"
+    adapter: "openai"
+    api_key_env: "DEEPSEEK_API_KEY"
+
+  # OpenAI 云端模型路由
+  # gpt-3.5-turbo, gpt-4, gpt-4-turbo 等
+  - model_pattern: "gpt-*"
+    target: "https://api.openai.com"
+    adapter: "openai"
+    api_key_env: "OPENAI_API_KEY"
+
+  # 超时测试路由
+  - model_pattern: "test-dial-timeout"
+    target: "http://192.0.2.1:9999"  # TEST-NET-1, 不可达地址
+    adapter: "openai"
+  
+  - model_pattern: "test-ttfb-timeout"
+    target: "http://localhost:9998"
+    adapter: "openai"
+
+  - model_pattern: "test-idle-timeout"
+    target: "http://localhost:9997"
+    adapter: "openai"
