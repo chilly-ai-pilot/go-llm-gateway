@@ -50,3 +50,41 @@ func TestOllamaTransformStreamChunk(t *testing.T) {
 		t.Fatalf("final stop chunk should set finish_reason=stop, got %+v", finalChunk.Choices[0].FinishReason)
 	}
 }
+
+func TestOllamaToProviderRequestUsesChatMessagesInStreamMode(t *testing.T) {
+	adapter := &OllamaAdapter{}
+	unifiedReq := &ChatCompletionRequest{
+		Model:  "llama3.2:latest",
+		Stream: true,
+		Messages: []Message{
+			{Role: "user", Content: "你好"},
+		},
+	}
+
+	body, err := adapter.ToProviderRequest(unifiedReq)
+	if err != nil {
+		t.Fatalf("ToProviderRequest error: %v", err)
+	}
+
+	if string(body) == "" || len(body) == 0 {
+		t.Fatal("body should not be empty")
+	}
+
+	if !containsString(string(body), "\"messages\":[") {
+		t.Fatalf("streaming Ollama request should use messages field, got %s", body)
+	}
+	if containsString(string(body), "\"prompt\":") {
+		t.Fatalf("streaming Ollama request should not send prompt field, got %s", body)
+	}
+}
+
+func containsString(s, substr string) bool {
+	return len(substr) == 0 || (len(s) >= len(substr) && (func() bool {
+		for i := 0; i+len(substr) <= len(s); i++ {
+			if s[i:i+len(substr)] == substr {
+				return true
+			}
+		}
+		return false
+	})())
+}

@@ -12,9 +12,15 @@ import (
 type OllamaAdapter struct{}
 
 // Ollama 原生请求格式
+type ollamaMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 type ollamaRequest struct {
 	Model       string                 `json:"model"`
-	Prompt      string                 `json:"prompt"`
+	Prompt      string                 `json:"prompt,omitempty"`
+	Messages    []ollamaMessage        `json:"messages,omitempty"`
 	Stream      bool                   `json:"stream"`
 	Temperature *float64               `json:"temperature,omitempty"`
 	NumPredict  *int                   `json:"num_predict,omitempty"` // Ollama 的 max_tokens
@@ -45,33 +51,41 @@ func (a *OllamaAdapter) ToProviderRequest(unifiedReq *ChatCompletionRequest) ([]
 		return nil, errors.New("request cannot be nil")
 	}
 
-	// 将 messages 转换为 prompt
-	// 简单策略：拼接所有消息，用换行分隔
-	var promptBuilder strings.Builder
-	for i, msg := range unifiedReq.Messages {
-		if i > 0 {
-			promptBuilder.WriteString("\n")
-		}
-		// 添加角色标识
-		switch msg.Role {
-		case "system":
-			promptBuilder.WriteString("System: ")
-		case "user":
-			promptBuilder.WriteString("User: ")
-		case "assistant":
-			promptBuilder.WriteString("Assistant: ")
-		}
-		promptBuilder.WriteString(msg.Content)
-	}
-
 	// 构建 Ollama 请求
 	ollamaReq := ollamaRequest{
 		Model:       unifiedReq.Model,
-		Prompt:      promptBuilder.String(),
 		Stream:      unifiedReq.Stream,
 		Temperature: unifiedReq.Temperature,
 		TopP:        unifiedReq.TopP,
 		Stop:        unifiedReq.Stop,
+	}
+
+	if unifiedReq.Stream {
+		ollamaReq.Messages = make([]ollamaMessage, 0, len(unifiedReq.Messages))
+		for _, msg := range unifiedReq.Messages {
+			ollamaReq.Messages = append(ollamaReq.Messages, ollamaMessage{
+				Role:    msg.Role,
+				Content: msg.Content,
+			})
+		}
+	} else {
+		// 非流式使用 /api/generate 的 prompt 方式
+		var promptBuilder strings.Builder
+		for i, msg := range unifiedReq.Messages {
+			if i > 0 {
+				promptBuilder.WriteString("\n")
+			}
+			switch msg.Role {
+			case "system":
+				promptBuilder.WriteString("System: ")
+			case "user":
+				promptBuilder.WriteString("User: ")
+			case "assistant":
+				promptBuilder.WriteString("Assistant: ")
+			}
+			promptBuilder.WriteString(msg.Content)
+		}
+		ollamaReq.Prompt = promptBuilder.String()
 	}
 
 	// MaxTokens 映射为 NumPredict
