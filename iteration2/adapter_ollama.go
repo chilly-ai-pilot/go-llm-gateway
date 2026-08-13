@@ -68,7 +68,7 @@ func (a *OllamaAdapter) ToProviderRequest(unifiedReq *ChatCompletionRequest) ([]
 	ollamaReq := ollamaRequest{
 		Model:       unifiedReq.Model,
 		Prompt:      promptBuilder.String(),
-		Stream:      false, // 本迭代只支持非流式
+		Stream:      unifiedReq.Stream,
 		Temperature: unifiedReq.Temperature,
 		TopP:        unifiedReq.TopP,
 		Stop:        unifiedReq.Stop,
@@ -78,10 +78,6 @@ func (a *OllamaAdapter) ToProviderRequest(unifiedReq *ChatCompletionRequest) ([]
 	if unifiedReq.MaxTokens != nil {
 		ollamaReq.NumPredict = unifiedReq.MaxTokens
 	}
-
-	// 强制设置 stream=false（本迭代不支持流式）
-	// Stream 现在是 bool 类型,默认为 false
-	ollamaReq.Stream = false
 
 	return json.Marshal(ollamaReq)
 }

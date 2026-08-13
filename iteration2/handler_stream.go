@@ -161,15 +161,15 @@ func handleStreamingRequest(
 		default:
 		}
 
-		line := scanner.Text()
-
-		// SSE 格式: "data: {...}"
-		if !strings.HasPrefix(line, "data: ") {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
 			continue
 		}
 
-		// 提取 JSON 部分
-		jsonData := strings.TrimPrefix(line, "data: ")
+		jsonData, ok := extractStreamPayload(line)
+		if !ok {
+			continue
+		}
 
 		// 特殊处理: [DONE] 信号
 		if jsonData == "[DONE]" {
@@ -223,6 +223,17 @@ func writeStreamError(w http.ResponseWriter, errorType, message string) {
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
 	}
+}
+
+func extractStreamPayload(line string) (string, bool) {
+	if strings.HasPrefix(line, "data: ") {
+		payload := strings.TrimSpace(strings.TrimPrefix(line, "data: "))
+		return payload, payload != ""
+	}
+	if strings.HasPrefix(line, "{") || strings.HasPrefix(line, "[") {
+		return strings.TrimSpace(line), true
+	}
+	return "", false
 }
 
 // idleTimeoutReader 包装 io.Reader,在每次读取前设置超时

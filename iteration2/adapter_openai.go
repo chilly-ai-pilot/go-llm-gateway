@@ -51,8 +51,7 @@ func (a *OpenAIAdapter) ToProviderRequest(unifiedReq *ChatCompletionRequest) ([]
 		reqBody["user"] = unifiedReq.User
 	}
 
-	// 强制设置 stream=false（本迭代不支持流式）
-	reqBody["stream"] = false
+	reqBody["stream"] = unifiedReq.Stream
 
 	return json.Marshal(reqBody)
 }

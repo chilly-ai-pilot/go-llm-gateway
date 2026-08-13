@@ -98,7 +98,7 @@ routes:
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama3",
+    "model": "llama3.2:latest",
     "messages": [{"role": "user", "content": "你好"}],
     "stream": false
   }'
