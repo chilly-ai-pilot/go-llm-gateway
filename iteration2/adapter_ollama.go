@@ -139,7 +139,14 @@ func (a *OllamaAdapter) TransformStreamChunk(providerChunk []byte) (*ChatComplet
 		return nil, fmt.Errorf("failed to parse ollama chunk: %w", err)
 	}
 
-	// 转换为 OpenAI Chat Completions chunk 格式
+	delta := MessageDelta{}
+	if ollamaChunk.Message.Role != "" && !ollamaChunk.Done {
+		delta.Role = ollamaChunk.Message.Role
+	}
+	if ollamaChunk.Message.Content != "" {
+		delta.Content = ollamaChunk.Message.Content
+	}
+
 	chunk := &ChatCompletionChunk{
 		ID:      generateID("chatcmpl"),
 		Object:  "chat.completion.chunk",
@@ -148,19 +155,15 @@ func (a *OllamaAdapter) TransformStreamChunk(providerChunk []byte) (*ChatComplet
 		Choices: []ChunkChoice{
 			{
 				Index: 0,
-				Delta: MessageDelta{
-					Role:    ollamaChunk.Message.Role,
-					Content: ollamaChunk.Message.Content,
-				},
-				FinishReason: nil,
+				Delta: delta,
 			},
 		},
 	}
 
-	// 如果 done=true,设置 finish_reason
 	if ollamaChunk.Done {
 		reason := "stop"
 		chunk.Choices[0].FinishReason = &reason
+		chunk.Choices[0].Delta = MessageDelta{}
 	}
 
 	return chunk, nil

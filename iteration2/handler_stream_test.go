@@ -24,3 +24,29 @@ func TestExtractStreamPayload(t *testing.T) {
 		})
 	}
 }
+
+func TestOllamaTransformStreamChunk(t *testing.T) {
+	adapter := &OllamaAdapter{}
+
+	contentChunk, err := adapter.TransformStreamChunk([]byte("{\"model\":\"llama3.2:latest\",\"message\":{\"role\":\"assistant\",\"content\":\"你好\"},\"done\":false}"))
+	if err != nil {
+		t.Fatalf("TransformStreamChunk(content) error: %v", err)
+	}
+	if contentChunk.Choices[0].Delta.Content != "你好" {
+		t.Fatalf("content chunk should carry content, got %+v", contentChunk.Choices[0].Delta)
+	}
+	if contentChunk.Choices[0].FinishReason != nil {
+		t.Fatalf("content chunk should not end with finish_reason, got %+v", contentChunk.Choices[0].FinishReason)
+	}
+
+	finalChunk, err := adapter.TransformStreamChunk([]byte("{\"model\":\"llama3.2:latest\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true}"))
+	if err != nil {
+		t.Fatalf("TransformStreamChunk(final) error: %v", err)
+	}
+	if finalChunk.Choices[0].Delta.Role != "" || finalChunk.Choices[0].Delta.Content != "" {
+		t.Fatalf("final stop chunk should be empty delta, got %+v", finalChunk.Choices[0].Delta)
+	}
+	if finalChunk.Choices[0].FinishReason == nil || *finalChunk.Choices[0].FinishReason != "stop" {
+		t.Fatalf("final stop chunk should set finish_reason=stop, got %+v", finalChunk.Choices[0].FinishReason)
+	}
+}
